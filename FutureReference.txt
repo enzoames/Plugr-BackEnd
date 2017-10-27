@@ -1,0 +1,119 @@
+=================================================
+==============COMPRESS JPEG FILES================
+=================================================
+
+for compresng jpeg files, run in command line then upload
+
+$ jpegoptim -m 90 ENZ_8763-1.jpg 
+
+ALL PHOTOS ARE APPLIED -m 90 in quality
+    example:
+        $ jpegoptim -m 90 *        
+        
+
+====================================
+============== CORS ================
+==================================== 
+
+In order to make cross domain requests. must do this
+
+pip install django-cors-headers
+
+INSTALLED_APPS = (
+    ...
+    'corsheaders',
+    ...
+)
+
+MIDDLEWARE = [  # Or MIDDLEWARE_CLASSES on Django < 1.10
+    ...
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    ...
+]
+
+and
+
+CORS_ORIGIN_WHITELIST = (
+    'google.com'
+    '134.74.251.204', 
+    '134.74.251.204:8000'
+    'localhost:8000'
+)
+
+or 
+
+CORS_ORIGIN_ALLOW_ALL = True
+
+
+==================================================================
+============== SERVING MEDIA FILES FOR DEPLOYMENT ================
+==================================================================
+
+Run command:
+
+$ sudo nano /etc/nginx/sites-available/plugr
+
+
+make sure there is a location block that includes - 
+
+
+    location /media/ {
+        root /home/plugr/plugr-django/plugr;
+    }
+
+Save and then check syntax
+
+$ sudo nginx -t
+
+$ sudo systemctl daemon-reload
+
+$ sudo nginx -t && sudo systemctl restart nginx
+
+$ sudo systemctl restart gunicorn
+
+* CHECK DOCUMENTATION FOR MORE INFO 
+https://www.digitalocean.com/community/tutorials/how-to-set-up-django-with-postgres-nginx-and-gunicorn-on-ubuntu-16-04#configure-nginx-to-proxy-pass-to-gunicorn
+
+
+
+========================================================
+============== CHANGING FILE PERMISIONS ================
+========================================================
+
+
+$ ls -lh
+
+the following command changes the file permision to this: -rw-rw-r--
+$ chmod 664 ENZ_1628-1.jpg
+
+READ HERE MORE INFO
+http://www.hostingadvice.com/how-to/change-file-permissions-linux/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
