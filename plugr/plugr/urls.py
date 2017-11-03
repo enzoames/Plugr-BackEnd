@@ -24,6 +24,7 @@ from leagues.views import home
 
 urlpatterns = [
     url(r'^api/ea/', include("enzoames.urls", namespace='enzoames')),
+    url(r'^api/turksystem/', include("turksystem.urls", namespace='turksystem')),
     url(r'^photologue/', include('photologue.urls', namespace='photologue')),
     url(r'^admin/', admin.site.urls),
     url(r'^$', home),

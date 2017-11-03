@@ -42,6 +42,7 @@ if not settings.DEBUG:
         # created apps
         'leagues',
         'enzoames',
+        'turksystem',
         # default apps
         'photologue',
         'sortedm2m',

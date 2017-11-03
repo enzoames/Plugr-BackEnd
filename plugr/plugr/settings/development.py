@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     # created apps
     'leagues',
     'enzoames',
+    'turksystem',
     # default apps
     'photologue',
     'sortedm2m',
@@ -105,7 +106,6 @@ DATABASES = {
     'PORT': '',
  }
 }
-
 
 
 # Password validation

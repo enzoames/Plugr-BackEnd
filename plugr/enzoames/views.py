@@ -64,7 +64,7 @@ class ContactEnzoAmesViewSet(viewsets.ModelViewSet):
 		serializer = ContactEnzoAmesSerializer(data=registerdata)
 
 		if serializer.is_valid():
-		 	contact_information = serializer.create(serializer.validated_data) #passing register data again. This is a work around
+		 	contact_information = serializer.create(serializer.validated_data)
 			return Response(status=status.HTTP_201_CREATED)
 		else:
 			print("\n ==============")

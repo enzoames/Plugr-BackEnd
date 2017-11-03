@@ -24,10 +24,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 
 # SECURITY WARNING: keep the secret key used in production secret!
 
-#SECRET_KEY = '&0@s4!jd#)yg0f$zih1ah!$m=df(k_3m=t6m=t#6z*3mc99f3t'
-#os.environ['PLUGR_DBUSER'] = 'enzo'
-#os.environ['PLUGR_DBPASSWORD'] = 'enzoames1992'
-
 SECRET_KEY = os.environ['PLUGR_DJANGO_SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -43,6 +39,7 @@ INSTALLED_APPS = [
     # created apps
     'leagues',
     'enzoames',
+    'turksystem',
     # default apps
     'photologue',
     'sortedm2m',
