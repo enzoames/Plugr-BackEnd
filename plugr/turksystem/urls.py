@@ -9,6 +9,7 @@ router.register(r'user', TurkUserViewSet, base_name='turkuser')
 router.register(r'login', LoginTurkUserViewSet, base_name='loginturkuser')
 router.register(r'load', LoadTurkUserViewSet, base_name='loadturkuser')
 router.register(r'logout', LogoutTurkUserViewSet, base_name='logoutturkuser')
+router.register(r'register', RegisterViewSet, base_name='registeruser')
 
 urlpatterns = [
     url(r'^', include(router.urls)),

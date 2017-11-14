@@ -59,3 +59,88 @@ class LogoutTurkUserViewSet(viewsets.ModelViewSet):
 			
 
 
+# ========================================================================================================================
+# ========================================================================================================================
+# ================================================ ROHAN =================================================================
+# ========================================================================================================================
+# ========================================================================================================================
+
+
+
+
+
+
+
+
+# ========================================================================================================================
+# ========================================================================================================================
+# ================================================ SAMMIE ================================================================
+# ========================================================================================================================
+# ========================================================================================================================
+
+
+
+
+
+
+
+
+
+
+# ========================================================================================================================
+# ========================================================================================================================
+# ================================================ ENZO ==================================================================
+# ========================================================================================================================
+# ========================================================================================================================
+
+
+
+class RegisterViewSet(viewsets.ModelViewSet):
+
+	def create(self, request, format=None):
+		print ("\nREQUEST:::\n")
+		print (request)
+		print (request.data)
+		TurkUsers = TurkUser.objects.all()
+		name = request.data.get('firstname', None) 
+		lastname = request.data.get('lastname', None)
+		email = request.data.get('email', None)
+		password = request.data.get('password', None)
+		registerdata = {
+			'name': name,
+			'lastname': lastname,
+			'email': email,
+			'password': password
+		}
+
+		if TurkUsers.filter(email=email).exists():
+			response = {'error': 'There already exists a user associated with this email'}
+			return Response(response, status=status.HTTP_400_BAD_REQUEST)
+
+		else:
+			if BlackList.objects.filter(user__email=email).exists():
+				reason = BlackList.objects.get(user__email=email).reason
+				response = {'error': reason}
+				return Response(response, status=status.HTTP_400_BAD_REQUEST)				
+			else:
+				serializer = RegisterSerializer(data=registerdata)
+				if serializer.is_valid():
+				 	register_information = serializer.create(serializer.validated_data)
+					return Response(status=status.HTTP_201_CREATED)
+				else:
+					print(serializer.errors)
+					return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
