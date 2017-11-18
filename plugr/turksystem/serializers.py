@@ -14,9 +14,15 @@ class TurkUserSerializer(serializers.ModelSerializer):
 # ========================================================================================================================
 # ========================================================================================================================
 class SysDemandSerializer(serializers.ModelSerializer):
+    client = TurkUserSerializer()
     class Meta:
         model = SystemDemand
         fields = '__all__'
+
+        def create(self,validated_data):
+            data = validated_data
+            sysDemand = SystemDemand.objects.create(**data)
+            return sysDemand
 
 
 class BidSerializer(serializers.ModelSerializer):

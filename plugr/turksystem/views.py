@@ -68,15 +68,45 @@ class SysDemandViewSet(viewsets.ModelViewSet):
     queryset = SystemDemand.objects.all()
     serializer_class = SysDemandSerializer
 
-    # def create(self, request, format=None):
-    #     # this doesn't make sense just for testing
-    #     if SystemDemand.objects.all():
-    #         systemDemans = SystemDemand.objects.all()
-    #         return Response(systemDemans, status=status.HTTP_202_ACCEPTED)
+    def create(self, request, format=None):
+
+        title = request.data.get('title')
+        precondition = request.data.get('preconditiion')
+        postcondition = request.data.get('postcondition')
+        description = request.data.get('description')
+        deadline = request.data.get('deadline')
+        reward = request.data.get('reward')
+        client = request.data.get('client')
+        status = request.data.get('status')
+        # dont forget to fetch client. client is obj
+        # if client exists then post the demand in database.
+        # else Response({error: "client doesnt exist"}, 400 )
+        sysDemandData = {
+            'title': title,
+            'precondition': precondition,
+            'postcondition': postcondition,
+            'description': description,
+            'deadline': deadline,
+            'reward': reward,
+            'client': client,
+            'status': status
+        }
+        serializer = SysDemandSerializer(data=sysDemandData)
+
+        if serializer.is_valid():
+            sysDemandInfo = serializer.create(serializer.validated_data)  # not sure why this is done
+            return Response(status=status.HTTP_201_CREATED)
+        else:
+            print(serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class BidViewSet(viewsets.ModelViewSet):
     queryset = Bid.objects.all()
     serializer_class = BidSerializer
+
+    def create(self, request, format=None):
+        pass
 
 
 # ========================================================================================================================
@@ -137,3 +167,6 @@ class RegisterViewSet(viewsets.ModelViewSet):
                 else:
                     print(serializer.errors)
                     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+

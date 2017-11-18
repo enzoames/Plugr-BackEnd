@@ -4,7 +4,7 @@ from .views import *
 
 router = DefaultRouter()
 
-# router.register(r'user/(?P<slug>\w+)', TurkUserViewSet, base_name='turkuser')
+router.register(r'user/(?P<slug>\w+)', TurkUserViewSet, base_name='turkuser')
 router.register(r'user', TurkUserViewSet, base_name='turkuser')
 router.register(r'login', LoginTurkUserViewSet, base_name='loginturkuser')
 router.register(r'load', LoadTurkUserViewSet, base_name='loadturkuser')
