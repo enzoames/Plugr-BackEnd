@@ -19,10 +19,9 @@ class SysDemandSerializer(serializers.ModelSerializer):
         model = SystemDemand
         fields = '__all__'
 
-        def create(self,validated_data):
-            data = validated_data
-            sysDemand = SystemDemand.objects.create(**data)
-            return sysDemand
+    def create(self, validated_data):
+        sysDemand = SystemDemand.objects.create(**validated_data)
+        return sysDemand
 
 
 class BidSerializer(serializers.ModelSerializer):

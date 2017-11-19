@@ -16,8 +16,26 @@ from django.forms.models import model_to_dict
 # Create your views here.
 
 class TurkUserViewSet(viewsets.ModelViewSet):
-    queryset = TurkUser.objects.all()
     serializer_class = TurkUserSerializer
+
+    def get_queryset(self):
+        queryset = { 'result': 'none' }
+
+        if self.kwargs['slug']:
+            queryParam = self.kwargs['slug']
+            print ("\nPARAM: ", queryParam)
+            print type(queryParam)
+
+            if str(queryParam) == 'developer':
+                queryset = TurkUser.objects.filter(credential='developer')
+            elif str(queryParam) == 'client':
+                queryset = TurkUser.objects.filter(credential='client')
+            else:
+                queryset = TurkUser.objects.filter(id=queryParam)
+        else:
+            queryset = TurkUser.objects.all()
+
+        return queryset
 
 
 class LoadTurkUserViewSet(viewsets.ModelViewSet):
@@ -67,38 +85,51 @@ class LogoutTurkUserViewSet(viewsets.ModelViewSet):
 class SysDemandViewSet(viewsets.ModelViewSet):
     queryset = SystemDemand.objects.all()
     serializer_class = SysDemandSerializer
+    permission_classes = (AllowAny,)
 
     def create(self, request, format=None):
-
         title = request.data.get('title')
-        precondition = request.data.get('preconditiion')
+        precondition = request.data.get('precondition')
         postcondition = request.data.get('postcondition')
         description = request.data.get('description')
         deadline = request.data.get('deadline')
         reward = request.data.get('reward')
         client = request.data.get('client')
-        status = request.data.get('status')
-        # dont forget to fetch client. client is obj
-        # if client exists then post the demand in database.
-        # else Response({error: "client doesnt exist"}, 400 )
-        sysDemandData = {
-            'title': title,
-            'precondition': precondition,
-            'postcondition': postcondition,
-            'description': description,
-            'deadline': deadline,
-            'reward': reward,
-            'client': client,
-            'status': status
-        }
-        serializer = SysDemandSerializer(data=sysDemandData)
+        Sysstatus = request.data.get('status')
 
-        if serializer.is_valid() and TurkUser.objects.filter(client=client):
-            sysDemandInfo = serializer.create(serializer.validated_data)  # not sure why this is done
-            return Response(status=status.HTTP_201_CREATED)
+        if TurkUser.objects.filter(email = client).exists():
+            client = TurkUser.objects.get(email=client)
+            json_client = model_to_dict(client)
+            #print(requestClient, type(requestClient))
+
+            sysDemandData = {
+                'title': title,
+                'precondition': precondition,
+                'postcondition': postcondition,
+                'description': description,
+                'deadline': deadline,
+                'reward': reward,
+                'client': client,
+                'status': Sysstatus
+            }
+
+            
+
+            SystemDemand.objects.create(**sysDemandData)
+            sysDemandData["client"] = json_client
+            return Response(sysDemandData,status=status.HTTP_201_CREATED)
         else:
-            print(serializer.errors)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            error = { 'error': 'Client Not found'}
+            return Response(error, status=status.HTTP_404_NOT_FOUND)
+
+        # serializer = SysDemandSerializer(data=sysDemandData)
+
+        # if serializer.is_valid():
+        #     sysDemandInfo = serializer.create(serializer.validated_data)
+        #     return Response(sysDemandInfo, status=status.HTTP_201_CREATED)
+        # else:
+        #     print(serializer.errors)
+        #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class BidViewSet(viewsets.ModelViewSet):
@@ -167,3 +198,6 @@ class RegisterViewSet(viewsets.ModelViewSet):
                 else:
                     print(serializer.errors)
                     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
