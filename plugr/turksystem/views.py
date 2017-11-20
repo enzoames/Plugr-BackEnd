@@ -9,7 +9,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import *
 from .models import *
-
 from django.forms.models import model_to_dict
 
 
@@ -113,9 +112,9 @@ class SysDemandViewSet(viewsets.ModelViewSet):
                 'status': Sysstatus
             }
 
-            
 
-            SystemDemand.objects.create(**sysDemandData)
+
+            SystemDemand.objects.create(**sysDemandData)#reminder to Rohan to fix
             sysDemandData["client"] = json_client
             return Response(sysDemandData,status=status.HTTP_201_CREATED)
         else:
@@ -130,6 +129,27 @@ class SysDemandViewSet(viewsets.ModelViewSet):
         # else:
         #     print(serializer.errors)
         #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class SelectSysDemandViewSet(viewsets.ModelViewSet):
+    serializer_class = SysDemandSerializer
+
+    def get_queryset(self):
+        """
+        this method will overide the get method for the /sysdemand end point
+        This query set should return a sysdemand based on a url: sysdemand/<id>/
+        url(r'^sysdemand/(?P<pk>[0-9]+)/$
+
+        :return:
+
+        """
+        print("this is get queryset")
+        #queryset = self.kwargs['id']
+        return SystemDemand.objects.filter(id = self.kwargs['id'])
+
+
+
 
 
 class BidViewSet(viewsets.ModelViewSet):
