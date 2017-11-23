@@ -73,7 +73,7 @@ class Bid(models.Model):
     is_chosen = models.BooleanField(default=False, verbose_name="Chosen?")
 
     def __str__(self):
-        return str(self.price)
+        return str(self.id)
 
 
 # ========================================================================================================================
