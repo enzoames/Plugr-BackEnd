@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from django.db.models import F
 from rest_framework import viewsets
 from django.shortcuts import render, HttpResponse
 from rest_framework.authentication import TokenAuthentication
@@ -9,10 +10,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import *
 from .models import *
-
+import json
+from django.core import serializers
 from django.forms.models import model_to_dict
 
-
+#from django.http import JsonResponse might be helpful
 # Create your views here.
 
 # ========================================================================================================================
@@ -20,6 +22,42 @@ from django.forms.models import model_to_dict
 # ================================================ ENZO ==================================================================
 # ========================================================================================================================
 # ========================================================================================================================
+class TurkUserProfileViewSet(viewsets.ModelViewSet):
+    serializer_class = TurkUserSerializer
+    queryset = TurkUser.objects.all()
+
+    def put(self, request):
+        user_id = request.data.get('user_id', None)
+        resume = request.data.get('resume', None)
+        technical_skills = request.data.get('technical_skills', None)
+        project_experience = request.data.get('project_experience', None)
+        interests = request.data.get('interests', None)
+        recent_work = request.data.get('recent_work', None)
+        business_credential = request.data.get('business_credential', None)
+            
+        turkuser = TurkUser.objects.get(id=user_id)
+        data = {        
+            'user_id': user_id,
+            'resume': resume,
+            'technical_skills': technical_skills,
+            'project_experience': project_experience,
+            'interests': interests,
+            'recent_work': recent_work,
+            'business_credential': business_credential
+        }
+
+        # USEFUL!
+        #final_data = dict(map(lambda item: (item[0], item[1]), data.items()))
+        #print (final_data)
+        final_data = dict(filter(lambda item: item[1]!="", data.items()))
+
+        serializer = TurkUserSerializer(data=final_data)
+        if serializer.is_valid():
+            updated_information = serializer.update(serializer.validated_data, turkuser)
+            return Response(model_to_dict(updated_information), status=status.HTTP_201_CREATED)
+        else:
+            print(serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TurkUserViewSet(viewsets.ModelViewSet):
@@ -27,7 +65,6 @@ class TurkUserViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = { 'result': 'none' }
-
         if self.kwargs:
             url_param = self.kwargs['slug']
             if str(url_param) == 'developer':
@@ -84,11 +121,14 @@ class RegisterViewSet(viewsets.ModelViewSet):
         lastname = request.data.get('lastname', None)
         email = request.data.get('email', None)
         password = request.data.get('password', None)
+        credential = request.data.get('credential', None)
+
         registerdata = {
             'name': name,
             'lastname': lastname,
             'email': email,
-            'password': password
+            'password': password,
+            'credential': credential
         }
 
         if TurkUsers.filter(email=email).exists():
@@ -103,12 +143,12 @@ class RegisterViewSet(viewsets.ModelViewSet):
             else:
                 serializer = RegisterSerializer(data=registerdata)
                 if serializer.is_valid():
-
                     register_information = serializer.create(serializer.validated_data)
-                    return Response(status=status.HTTP_201_CREATED)
+                    return Response(model_to_dict(register_information), status=status.HTTP_201_CREATED)
                 else:
                     print(serializer.errors)
                     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class BidBySDIDViewSet(viewsets.ModelViewSet): # given the id of a System Demand, returns all bids associated to it
@@ -122,6 +162,7 @@ class BidBySDIDViewSet(viewsets.ModelViewSet): # given the id of a System Demand
 class BidByEmailViewSet(viewsets.ModelViewSet): # given a email, returns all bids for that email.
     serializer_class = BidSerializer
     def get_queryset(self):
+        queryset = { 'bid' : 'none'}
         query_param = self.request.query_params.get('email', None)
         if query_param:
             user = TurkUser.objects.get(email=str(query_param))
@@ -130,7 +171,23 @@ class BidByEmailViewSet(viewsets.ModelViewSet): # given a email, returns all bid
                 queryset = Bid.objects.filter(developer__email=user.email)
             elif user.credential == 'client':
                 print ("client")
-                queryset = Bid.objects.filter(systemdemand__client__email=user.email)        
+                queryset = Bid.objects.filter(systemdemand__client__email=user.email)
+                #client_bids = Bid.objects.filter(systemdemand__client__email=user.email)
+                #client_bids = json.dumps(list(client_bids.values()), indent=4, sort_keys=True, default=str)
+                #client_SDs = SystemDemand.objects.filter(client__email=user.email)
+                #client_SDs = json.dumps(list(client_SDs.values()), indent=4, sort_keys=True, default=str)
+        return queryset
+
+
+class SysDemandByClientViewSet(viewsets.ModelViewSet): #passing query parameter to get all SDs from a single client
+    serializer_class = SysDemandSerializer
+
+    def get_queryset(self):
+        query_param = self.request.query_params.get('email', None)
+        if query_param:
+            queryset = SystemDemand.objects.filter(client__email=str(query_param))
+        else:
+            queryset = SystemDemand.objects.all()
         return queryset
 
 
@@ -190,23 +247,64 @@ class BidViewSet(viewsets.ModelViewSet):
     queryset = Bid.objects.all() # all bids
 
     def create(self, request, format=None):
-        price = request.data.get("price")
-        developer = request.data.get("developer")
-        systemdemand = request.data.get("systemdemand")
+        price = request.data.get('bid')
+        dev_email = request.data.get('email')
+        sd_id = request.data.get('sdID')
 
-        if (TurkUser.objects.filter(email = developer).exists() and
-            SystemDemand.objects.filter(id = systemdemand).exists()):
+        if not Bid.objects.filter(developer__email=dev_email).filter(systemdemand__id=sd_id).exists():
+            data = {
+                'price': price,
+                'developer': TurkUser.objects.get(email=dev_email), #model_to_dict(TurkUser.objects.get(email=dev_email)),
+                'systemdemand': SystemDemand.objects.get(id=sd_id) #model_to_dict(sd)
+            }
 
-            postbid ={
-                "price":price,
-                "developer":TurkUser.objects.get(email=developer),
-                "systemdemand":SystemDemand.objects.get(id=systemdemand)
-                }
-
-            Bid.objects.create(**postbid)
+            Bid.objects.create(**data)
             return Response(status=status.HTTP_201_CREATED)
+            # serializer = BidSerializer(data=data)
+            # if serializer.is_valid():
+            #     print (" === VALID BID POST")
+            #     bid_information = serializer.create(serializer.validated_data)
+            #     return Response(model_to_dict(bid_information), status=status.HTTP_201_CREATED)
+            # else:
+            #     print (" === INVALID BID POST")
+            #     print(serializer.errors)
+            #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         else:
-            error = { 'error': 'Client Not found'}
-            return Response(error,status=status.HTTP_404_NOT_FOUND)
+            error = { 'error': 'There is already a bid in your account for this System Demand'}
+            return Response(error, status=status.HTTP_404_NOT_FOUND)
+            
+
+
+class DepositeViewSet(viewsets.ModelViewSet):
+    """View set for deposite"""
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (AllowAny,)
+    queryset = TurkUser.objects.all()
+    serializer_class = TurkUserSerializer
+    
+    def create(self, request, format=None):
+        amount = request.data.get("amount")
+        user = request.data.get("user")
+
+        if int(amount) < 0:
+            error = {'error': 'Cannot deposite negative amount'}
+            return Response(error, status=status.HTTP_400_BAD_REQUEST)
+
+        else:
+            if TurkUser.objects.filter(email=user).exists():
+
+                TurkUser.objects.filter(email=user).update(money=F("money") + amount)
+                return_user = model_to_dict(TurkUser.objects.get(email=user))
+                return Response(return_user,status=status.HTTP_202_ACCEPTED)
+            else:
+                error = {'error': 'Cannot deposite negative amount'}
+                Response(error,status=status.HTTP_404_NOT_FOUND)
+
+
+
+
+
+
 
 
