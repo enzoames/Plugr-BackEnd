@@ -23,9 +23,15 @@ class TurkUser(models.Model):
     message = models.TextField(verbose_name="Message", blank=True, null=True)
     money = models.IntegerField(verbose_name="Money", default=0)
     completed_projects = models.IntegerField(verbose_name="Completed Projects", default=0)
+    resume = models.TextField(verbose_name="Resume", blank=True, null=True)
+    technical_skills = models.TextField(verbose_name="Technical Skills", blank=True, null=True)
+    project_experience = models.TextField(verbose_name="Project Experience", blank=True, null=True)
+    interests = models.TextField(verbose_name="Interests", blank=True, null=True)
+    recent_work = models.TextField(verbose_name="Recent Work", blank=True, null=True)
+    business_credential = models.TextField(verbose_name="Business Credential", blank=True, null=True)
 
     def __unicode__(self):
-        return self.email
+        return self.email or u''
 
 # ========================================================================================================================
 # ========================================================================================================================
@@ -34,19 +40,11 @@ class TurkUser(models.Model):
 # ========================================================================================================================
 
 class SystemDemand(models.Model):
-    NONE = "None"
-    POSTED = "Posted"
-    DELIVERED = "Delivered"
-    TIMED_OUT = "Timed-out"
-    STATUS = "Inprogress"
-    CANCELED = "Canceled"
+    OPEN = "Open"
+    CLOSED = "Closed"
 
-    status_list = ((POSTED, "Posted"),
-               (DELIVERED, "Delivered"),
-               (TIMED_OUT, "Timed-out"),
-               (STATUS, "Inprogress"),
-               (CANCELED, "Canceled"),
-               (NONE, "None"))
+    status_list = ((OPEN, "Open"),
+               (CLOSED, "Closed"))
 
     title = models.CharField(max_length=20, blank=True, null=True, verbose_name="Title")
     precondition = models.TextField(blank=True, null=True, verbose_name="Precondition")
@@ -56,11 +54,7 @@ class SystemDemand(models.Model):
     reward = models.IntegerField(default=0, verbose_name="Reward")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     client = models.ForeignKey(TurkUser, blank=True, null=True)
-    status = models.CharField(max_length=10, choices=status_list, default=NONE)
-
-    # NOTE:::
-    # cant reference bid table and bid table reference system demand simultaniously | logically incorrent, causes loop
-    # winning_bid = models.ForeignKey(Bid,blank=True,null = True) 
+    status = models.CharField(max_length=10, choices=status_list, default=OPEN)
 
     def __str__(self):
         return str(self.title) + "        [ " + str(self.status) + " ]"
