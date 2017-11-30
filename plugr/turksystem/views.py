@@ -14,7 +14,8 @@ import json
 from django.core import serializers
 from django.forms.models import model_to_dict
 
-#from django.http import JsonResponse might be helpful
+
+# from django.http import JsonResponse might be helpful
 # Create your views here.
 
 # ========================================================================================================================
@@ -34,9 +35,9 @@ class TurkUserProfileViewSet(viewsets.ModelViewSet):
         interests = request.data.get('interests', None)
         recent_work = request.data.get('recent_work', None)
         business_credential = request.data.get('business_credential', None)
-            
+
         turkuser = TurkUser.objects.get(id=user_id)
-        data = {        
+        data = {
             'user_id': user_id,
             'resume': resume,
             'technical_skills': technical_skills,
@@ -47,9 +48,9 @@ class TurkUserProfileViewSet(viewsets.ModelViewSet):
         }
 
         # USEFUL!
-        #final_data = dict(map(lambda item: (item[0], item[1]), data.items()))
-        #print (final_data)
-        final_data = dict(filter(lambda item: item[1]!="", data.items()))
+        # final_data = dict(map(lambda item: (item[0], item[1]), data.items()))
+        # print (final_data)
+        final_data = dict(filter(lambda item: item[1] != "", data.items()))
 
         serializer = TurkUserSerializer(data=final_data)
         if serializer.is_valid():
@@ -64,7 +65,7 @@ class TurkUserViewSet(viewsets.ModelViewSet):
     serializer_class = TurkUserSerializer
 
     def get_queryset(self):
-        queryset = { 'result': 'none' }
+        queryset = {'result': 'none'}
         if self.kwargs:
             url_param = self.kwargs['slug']
             if str(url_param) == 'developer':
@@ -87,7 +88,6 @@ class LoadTurkUserViewSet(viewsets.ModelViewSet):
 
 
 class LoginTurkUserViewSet(viewsets.ModelViewSet):
-
     def create(self, request, format=None):
         email = request.data.get('email', None)
         password = request.data.get('password', None)
@@ -150,36 +150,38 @@ class RegisterViewSet(viewsets.ModelViewSet):
                     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
-class BidBySDIDViewSet(viewsets.ModelViewSet): # given the id of a System Demand, returns all bids associated to it
+class BidBySDIDViewSet(viewsets.ModelViewSet):  # given the id of a System Demand, returns all bids associated to it
     serializer_class = BidSerializer
+
     def get_queryset(self):
         if self.kwargs:
             bid_sd = self.kwargs['sd']
             queryset = Bid.objects.filter(systemdemand__id=bid_sd)
         return queryset
 
-class BidByEmailViewSet(viewsets.ModelViewSet): # given a email, returns all bids for that email.
+
+class BidByEmailViewSet(viewsets.ModelViewSet):  # given a email, returns all bids for that email.
     serializer_class = BidSerializer
+
     def get_queryset(self):
-        queryset = { 'bid' : 'none'}
+        queryset = {'bid': 'none'}
         query_param = self.request.query_params.get('email', None)
         if query_param:
             user = TurkUser.objects.get(email=str(query_param))
             if user.credential == 'developer':
-                print ("developer")
+                print("developer")
                 queryset = Bid.objects.filter(developer__email=user.email)
             elif user.credential == 'client':
-                print ("client")
+                print("client")
                 queryset = Bid.objects.filter(systemdemand__client__email=user.email)
-                #client_bids = Bid.objects.filter(systemdemand__client__email=user.email)
-                #client_bids = json.dumps(list(client_bids.values()), indent=4, sort_keys=True, default=str)
-                #client_SDs = SystemDemand.objects.filter(client__email=user.email)
-                #client_SDs = json.dumps(list(client_SDs.values()), indent=4, sort_keys=True, default=str)
+                # client_bids = Bid.objects.filter(systemdemand__client__email=user.email)
+                # client_bids = json.dumps(list(client_bids.values()), indent=4, sort_keys=True, default=str)
+                # client_SDs = SystemDemand.objects.filter(client__email=user.email)
+                # client_SDs = json.dumps(list(client_SDs.values()), indent=4, sort_keys=True, default=str)
         return queryset
 
 
-class SysDemandByClientViewSet(viewsets.ModelViewSet): #passing query parameter to get all SDs from a single client
+class SysDemandByClientViewSet(viewsets.ModelViewSet):  # passing query parameter to get all SDs from a single client
     serializer_class = SysDemandSerializer
 
     def get_queryset(self):
@@ -198,7 +200,7 @@ class SysDemandByClientViewSet(viewsets.ModelViewSet): #passing query parameter 
 # ========================================================================================================================
 
 
-class SysDemandViewSet(viewsets.ModelViewSet):    
+class SysDemandViewSet(viewsets.ModelViewSet):
     serializer_class = SysDemandSerializer
 
     def get_queryset(self):
@@ -219,10 +221,10 @@ class SysDemandViewSet(viewsets.ModelViewSet):
         client = request.data.get('client')
         Sysstatus = request.data.get('status')
 
-        if TurkUser.objects.filter(email = client).exists():
+        if TurkUser.objects.filter(email=client).exists():
             client = TurkUser.objects.get(email=client)
             json_client = model_to_dict(client)
-            
+
             sysDemandData = {
                 'title': title,
                 'precondition': precondition,
@@ -234,17 +236,17 @@ class SysDemandViewSet(viewsets.ModelViewSet):
                 'status': Sysstatus
             }
 
-            SystemDemand.objects.create(**sysDemandData)#reminder to Rohan to fix
+            SystemDemand.objects.create(**sysDemandData)  # reminder to Rohan to fix
             sysDemandData["client"] = json_client
-            return Response(sysDemandData,status=status.HTTP_201_CREATED)
+            return Response(sysDemandData, status=status.HTTP_201_CREATED)
         else:
-            error = { 'error': 'Client Not found'}
+            error = {'error': 'Client Not found'}
             return Response(error, status=status.HTTP_404_NOT_FOUND)
 
 
 class BidViewSet(viewsets.ModelViewSet):
     serializer_class = BidSerializer
-    queryset = Bid.objects.all() # all bids
+    queryset = Bid.objects.all()  # all bids
 
     def create(self, request, format=None):
         price = request.data.get('bid')
@@ -254,8 +256,9 @@ class BidViewSet(viewsets.ModelViewSet):
         if not Bid.objects.filter(developer__email=dev_email).filter(systemdemand__id=sd_id).exists():
             data = {
                 'price': price,
-                'developer': TurkUser.objects.get(email=dev_email), #model_to_dict(TurkUser.objects.get(email=dev_email)),
-                'systemdemand': SystemDemand.objects.get(id=sd_id) #model_to_dict(sd)
+                'developer': TurkUser.objects.get(email=dev_email),
+                # model_to_dict(TurkUser.objects.get(email=dev_email)),
+                'systemdemand': SystemDemand.objects.get(id=sd_id)  # model_to_dict(sd)
             }
 
             Bid.objects.create(**data)
@@ -271,24 +274,23 @@ class BidViewSet(viewsets.ModelViewSet):
             #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         else:
-            error = { 'error': 'There is already a bid in your account for this System Demand'}
+            error = {'error': 'There is already a bid in your account for this System Demand'}
             return Response(error, status=status.HTTP_404_NOT_FOUND)
-            
 
 
-class DepositeViewSet(viewsets.ModelViewSet):
+class DepositViewSet(viewsets.ModelViewSet):
     """View set for deposite"""
     authentication_classes = (TokenAuthentication,)
     permission_classes = (AllowAny,)
     queryset = TurkUser.objects.all()
     serializer_class = TurkUserSerializer
-    
+
     def create(self, request, format=None):
         amount = request.data.get("amount")
         user = request.data.get("user")
 
         if int(amount) < 0:
-            error = {'error': 'Cannot deposite negative amount'}
+            error = {'error': 'Cannot deposit negative amount'}
             return Response(error, status=status.HTTP_400_BAD_REQUEST)
 
         else:
@@ -296,15 +298,45 @@ class DepositeViewSet(viewsets.ModelViewSet):
 
                 TurkUser.objects.filter(email=user).update(money=F("money") + amount)
                 return_user = model_to_dict(TurkUser.objects.get(email=user))
-                return Response(return_user,status=status.HTTP_202_ACCEPTED)
+                return Response(return_user, status=status.HTTP_202_ACCEPTED)
             else:
-                error = {'error': 'Cannot deposite negative amount'}
-                Response(error,status=status.HTTP_404_NOT_FOUND)
+                error = {'error': 'Cannot deposit negative amount'}
+                Response(error, status=status.HTTP_404_NOT_FOUND)
 
 
+class TransactionViewSet(viewsets.ModelViewSet):
+    """This handles money"""
 
+    def put(self, request, format=None):
+        sysdemand = request.data.get("systemdemand")
+        client = request.data.get("client")
+        developer = request.data.get("developer")
 
+        if (TurkUser.objects.filter(email=client).exists() and
+                TurkUser.objects.filter(email=developer).exists() and
+                SystemDemand.objects.filter(id=sysdemand).exists()
+            ):
+            # get sysdemand
+            sys = SystemDemand.objects.get(id=sysdemand)
+            front_pay = sys.reward / 2
 
+            # subtract money from client
+            TurkUser.objects.filter(email=client).update(money=F("money") - front_pay)
 
+            # add money to devepler account
+            TurkUser.objects.filter(email=developer).update(money=F("money") + front_pay)
+            # i also think we should add the front_pay to the choosen developer table
 
+            dev = model_to_dict(TurkUser.objects.get(email=developer))
+            cli = model_to_dict(TurkUser.objects.get(email=client))
 
+            # just for show
+            return_dic = {
+                "front_Fee": front_pay,
+                "client_": cli,
+                "developer_": dev
+            }
+
+            return Response(return_dic, status=status.HTTP_202_ACCEPTED)
+        else:
+            Response(status=status.HTTP_400_BAD_REQUEST)
