@@ -12,7 +12,8 @@ router.register(r'logout', LogoutTurkUserViewSet, base_name='logoutturkuser')
 router.register(r'register', RegisterViewSet, base_name='registeruser')
 router.register(r'sysdemand/email', SysDemandByClientViewSet, base_name='sd_by_client')
 router.register(r'sysdemand', SysDemandViewSet, base_name='get_and_post_sysdemand')
-router.register(r'deposite',DepositeViewSet,base_name='deposite')
+router.register(r'deposite',DepositViewSet,base_name='deposite')
+router.register(r'transaction',TransactionViewSet,base_name='transaction')
 #dont touch the order of these urls
 router.register(r'bid/email', BidByEmailViewSet, base_name ='emailbid') #bids by email, for either dev or client
 router.register(r'bid', BidViewSet, base_name ='postbid') # get all bids, post a bid
