@@ -33,6 +33,7 @@ class TurkUser(models.Model):
     def __unicode__(self):
         return self.email or u''
 
+
 # ========================================================================================================================
 # ========================================================================================================================
 # ==================================================== ROHAN =============================================================
@@ -44,7 +45,7 @@ class SystemDemand(models.Model):
     CLOSED = "Closed"
 
     status_list = ((OPEN, "Open"),
-               (CLOSED, "Closed"))
+                   (CLOSED, "Closed"))
 
     title = models.CharField(max_length=20, blank=True, null=True, verbose_name="Title")
     precondition = models.TextField(blank=True, null=True, verbose_name="Precondition")
@@ -59,8 +60,9 @@ class SystemDemand(models.Model):
     def __str__(self):
         return str(self.title) + "        [ " + str(self.status) + " ]"
 
+
 class Bid(models.Model):
-    bid_created = models.DateTimeField(auto_now_add=True, verbose_name="Bid Created" )
+    bid_created = models.DateTimeField(auto_now_add=True, verbose_name="Bid Created")
     price = models.IntegerField(default=0, verbose_name="Price")
     developer = models.ForeignKey(TurkUser, blank=True, null=True, verbose_name="Developer")
     systemdemand = models.ForeignKey(SystemDemand, blank=True, null=True, verbose_name="System Demand")
@@ -68,6 +70,16 @@ class Bid(models.Model):
 
     def __str__(self):
         return str(self.id)
+
+
+class ChosenDeveloper(models.Model):
+    """This model is to record Developers how have been choosen by clients"""
+    result = models.TextField(blank=True, null=True, verbose_name="results")
+    developer = models.ForeignKey(TurkUser, blank=True, null=True, related_name="developer")
+    sysdemand = models.ForeignKey(SystemDemand, blank=True, null=True)
+    is_completed = models.BooleanField(default=False, verbose_name="Completed?")
+    delivered_at = models.DateTimeField(null=True, blank=True, verbose_name="delivered")
+    front_fee = models.IntegerField(default=0, blank=True, null=True, verbose_name="front_fee")
 
 
 # ========================================================================================================================
@@ -105,21 +117,3 @@ class BlackList(models.Model):
     user = models.ForeignKey(TurkUser, verbose_name="User", blank=True, null=True)
     reason = models.TextField(verbose_name="Reason", blank=True, null=True)
     blacklisted_date = models.DateTimeField(auto_now_add=True, verbose_name="Blacklisted Date")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
