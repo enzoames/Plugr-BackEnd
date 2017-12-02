@@ -219,9 +219,9 @@ class SysDemandViewSet(viewsets.ModelViewSet):
         deadline = request.data.get('deadline')
         reward = request.data.get('reward')
         client = request.data.get('client')
-        Sysstatus = request.data.get('status')
+        print(request.data)
 
-        if TurkUser.objects.filter(email=client).exists():
+        if TurkUser.objects.filter(email=str(client)).exists():
             client = TurkUser.objects.get(email=client)
             json_client = model_to_dict(client)
 
@@ -233,10 +233,11 @@ class SysDemandViewSet(viewsets.ModelViewSet):
                 'deadline': deadline,
                 'reward': reward,
                 'client': client,
-                'status': Sysstatus
+                'status': "Open"
             }
 
             SystemDemand.objects.create(**sysDemandData)  # reminder to Rohan to fix
+            
             sysDemandData["client"] = json_client
             return Response(sysDemandData, status=status.HTTP_201_CREATED)
         else:
@@ -325,18 +326,69 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
             # add money to devepler account
             TurkUser.objects.filter(email=developer).update(money=F("money") + front_pay)
-            # i also think we should add the front_pay to the choosen developer table
-
-            dev = model_to_dict(TurkUser.objects.get(email=developer))
-            cli = model_to_dict(TurkUser.objects.get(email=client))
+            # i also think we should add the front_pay to the chosen developer table
 
             # just for show
             return_dic = {
                 "front_Fee": front_pay,
-                "client_": cli,
-                "developer_": dev
+                "client_": model_to_dict(TurkUser.objects.get(email=developer)),
+                "developer_": model_to_dict(TurkUser.objects.get(email=client))
             }
 
             return Response(return_dic, status=status.HTTP_202_ACCEPTED)
         else:
             Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChooseDeveloperViewSet(viewsets.ModelViewSet):  # might not be the way we need this
+    serializer_class = ChosenDeveloperSerializer
+
+    def create(self, request, format=None):
+        print(request.data)
+        check = True
+        response_dic = dict()
+
+        for obj in request.data:
+
+            systemdemand = obj['sdID']
+            dev = obj['devID']
+
+            if SystemDemand.objects.filter(id=systemdemand).exists():
+
+                developer = TurkUser.objects.get(id=dev)
+                system = SystemDemand.objects.get(id=systemdemand)
+                front_free = system.reward/2
+
+                data = {
+                    "developer": developer,
+                    "sysdemand": system,
+                    "front_fee": front_free
+
+                }
+
+                print("creating contract")
+                ChosenDeveloper.objects.create(**data)
+
+
+            else:
+                check = False
+                response_dic[systemdemand] = "this systemdemand does not exist"
+
+        if (check):
+            return Response(status.HTTP_201_CREATED)
+        else:
+            return Response(response_dic, status.HTTP_400_BAD_REQUEST)
+
+
+class ChooseDeveloperByClientViewSet(viewsets.ModelViewSet):
+    serializer_class = ChosenDeveloperSerializer
+
+    def get_queryset(self):
+        print("BY_EMAIL")
+        query_param = self.request.query_params.get('email', None)
+        print(query_param)
+        if query_param:
+            queryset = ChosenDeveloper.objects.filter(sysdemand__client__email=str(query_param))
+        else:
+            queryset = ChosenDeveloper.objects.all()
+        return queryset

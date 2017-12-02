@@ -72,14 +72,14 @@ class Bid(models.Model):
         return str(self.id)
 
 
-class ChoosenDeveloper(models.Model):
+class ChosenDeveloper(models.Model):
     """This model is to record Developers how have been choosen by clients"""
-    result = models.CharField(max_length=300, blank=True, null=True, verbose_name="results")
-    developer = models.ForeignKey(TurkUser, blank=True, null=True,related_name="developer")
-    client = models.ForeignKey(TurkUser, blank=True, null=True,related_name="client")
+    result = models.TextField(blank=True, null=True, verbose_name="results")
+    developer = models.ForeignKey(TurkUser, blank=True, null=True, related_name="developer")
     sysdemand = models.ForeignKey(SystemDemand, blank=True, null=True)
     is_completed = models.BooleanField(default=False, verbose_name="Completed?")
-    delivered = models.DateTimeField(null=True, blank=True, verbose_name="delivered")
+    delivered_at = models.DateTimeField(null=True, blank=True, verbose_name="delivered")
+    front_fee = models.IntegerField(default=0, blank=True, null=True, verbose_name="front_fee")
 
 
 # ========================================================================================================================

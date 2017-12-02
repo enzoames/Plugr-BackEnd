@@ -17,6 +17,7 @@ class TurkUserSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
 # ========================================================================================================================
 # ========================================================================================================================
 # ================================================ ROHAN ==================================================================
@@ -24,6 +25,7 @@ class TurkUserSerializer(serializers.ModelSerializer):
 # ========================================================================================================================
 class SysDemandSerializer(serializers.ModelSerializer):
     client = TurkUserSerializer()
+
     class Meta:
         model = SystemDemand
         fields = '__all__'
@@ -40,12 +42,37 @@ class BidSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bid
         fields = '__all__'
-    
+
     def create(self, validated_data):
         # print(json.dumps(data, indent=4))
-        print (" ===> BidSerializer Create ")
+        print(" ===> BidSerializer Create ")
         register = Bid.objects.create(**validated_data)
         return register
+
+
+class ChosenDeveloperSerializer(serializers.ModelSerializer):
+    sysdemand = SysDemandSerializer()
+    client = TurkUserSerializer()
+    developer = TurkUserSerializer()  # for dev and client
+
+    class Meta:
+        model = ChosenDeveloper
+        fields = '__all__'
+
+    def create(self, validated_data):
+        print("Choosen Dev serializer")
+        register = ChosenDeveloper.objects.create(**validated_data)
+        return register
+
+    # when we need to update the is_delivered, field
+    def update(self, validated_data, instance):
+        print("updating choosen developer table")
+        # instance.result = validated_data.get('result',instance.result)
+        instance.is_completed = validated_data.get('is_completed', instance.is_completed)
+        instance.deliverd = validated_data.get('delivered', instance.deliverd)
+        instance.front_fee = validated_data.get('front_fee', instance.front_fee)
+        instance.save()
+        return instance
 
 
 # ========================================================================================================================
@@ -63,12 +90,3 @@ class RegisterSerializer(serializers.ModelSerializer):
         # print(json.dumps(data, indent=4))
         register = TurkUser.objects.create(**validated_data)
         return register
-
-
-
-
-
-
-
-
-
