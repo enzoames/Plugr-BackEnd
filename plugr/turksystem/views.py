@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import *
 from .models import *
+import datetime
 import json
 from django.core import serializers
 from django.forms.models import model_to_dict
@@ -30,6 +31,7 @@ class TurkUserProfileViewSet(viewsets.ModelViewSet):
     def put(self, request):
         user_id = request.data.get('user_id', None)
         resume = request.data.get('resume', None)
+        bio = request.data.get('bio', None)
         technical_skills = request.data.get('technical_skills', None)
         project_experience = request.data.get('project_experience', None)
         interests = request.data.get('interests', None)
@@ -40,6 +42,7 @@ class TurkUserProfileViewSet(viewsets.ModelViewSet):
         data = {
             'user_id': user_id,
             'resume': resume,
+            'bio': bio,
             'technical_skills': technical_skills,
             'project_experience': project_experience,
             'interests': interests,
@@ -237,7 +240,7 @@ class SysDemandViewSet(viewsets.ModelViewSet):
             }
 
             SystemDemand.objects.create(**sysDemandData)  # reminder to Rohan to fix
-            
+
             sysDemandData["client"] = json_client
             return Response(sysDemandData, status=status.HTTP_201_CREATED)
         else:
@@ -321,10 +324,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
             sys = SystemDemand.objects.get(id=sysdemand)
             front_pay = sys.reward / 2
 
-            # subtract money from client
-            TurkUser.objects.filter(email=client).update(money=F("money") - front_pay)
-
-            # add money to devepler account
+            # add money to devepler account half the bidding pice not reward
             TurkUser.objects.filter(email=developer).update(money=F("money") + front_pay)
             # i also think we should add the front_pay to the chosen developer table
 
@@ -350,34 +350,79 @@ class ChooseDeveloperViewSet(viewsets.ModelViewSet):  # might not be the way we 
 
         for obj in request.data:
 
-            systemdemand = obj['sdID']
+            sysdemand = obj['sdID']
             dev = obj['devID']
+            bidPrice = obj['bidPrice']
 
-            if SystemDemand.objects.filter(id=systemdemand).exists():
+            if SystemDemand.objects.filter(id=sysdemand).exists():
 
                 developer = TurkUser.objects.get(id=dev)
-                system = SystemDemand.objects.get(id=systemdemand)
-                front_free = system.reward/2
+                system = SystemDemand.objects.get(id=sysdemand)
+                front_fee = bidPrice / 2
 
                 data = {
                     "developer": developer,
                     "sysdemand": system,
-                    "front_fee": front_free
+                    "front_fee": front_fee
 
                 }
 
-                print("creating contract")
                 ChosenDeveloper.objects.create(**data)
+                print(system.client)
+
+                # removing reward from client account
+                TurkUser.objects.filter(email=str(system.client)).update(money=F("money") - front_fee)
+                # pay dev half of the bid price bidPrice
+                TurkUser.objects.filter(id=dev).update(money=F("money") + front_fee)
+                # change status of the sysdemand to closed
+                SystemDemand.objects.filter(id=sysdemand).update(status="Closed")
+                #change choosen to true
+                Bid.objects.filter(systemdemand__id=sysdemand).update(is_chosen=True)
+                #Bid.objects.all(systemdemand__id=SystemDemand).exclude(developer__id=dev).delete()
+
+                Bid.objects.filter(systemdemand__id=sysdemand).exclude(developer__id=dev).delete()
+
 
 
             else:
                 check = False
                 response_dic[systemdemand] = "this systemdemand does not exist"
 
-        if (check):
+        if check:
             return Response(status.HTTP_201_CREATED)
         else:
             return Response(response_dic, status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, format=None):
+        result1 = request.data.get('result')
+        sysdemand = request.data.get("sdID")
+        developer = request.data.get("devID")
+
+        ### The updates comes when the developer delivers the systemdemand
+        print("Inside update ChooseDeveloperViewSet")
+        if (TurkUser.objects.filter(id=developer).exists() and
+                SystemDemand.objects.filter(id=sysdemand).exists()
+            ):
+            # get sysdemand
+            # sys = SystemDemand.objects.get(id=sysdemand)
+            remaining_balance = ChosenDeveloper.objects.get(sysdemand__id=sysdemand).front_fee
+            print(TurkUser.objects.get(credential='superuser'))
+            print(remaining_balance)
+
+            # transfer remaining money to the super user account
+            TurkUser.objects.filter(credential='superuser').update(money=F('money') + remaining_balance)
+
+            # update date_deliverd, result, is completed and result.
+            ChosenDeveloper.objects.filter(sysdemand__id=sysdemand).update(result=result1)  # update result
+            ChosenDeveloper.objects.filter(sysdemand__id=sysdemand).update(is_completed=True)  # update is completed
+            ChosenDeveloper.objects.filter(sysdemand__id=sysdemand).update(
+                delivered_at=datetime.datetime.now())  # update date
+
+            contract = model_to_dict(ChosenDeveloper.objects.get(sysdemand__id=sysdemand))
+
+            return Response(contract, status=status.HTTP_202_ACCEPTED)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
 class ChooseDeveloperByClientViewSet(viewsets.ModelViewSet):

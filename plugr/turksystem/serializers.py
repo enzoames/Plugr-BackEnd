@@ -9,6 +9,7 @@ class TurkUserSerializer(serializers.ModelSerializer):
 
     def update(self, validated_data, instance):
         instance.resume = validated_data.get('resume', instance.resume)
+        instance.bio = validated_data.get('bio', instance.bio)
         instance.technical_skills = validated_data.get('technical_skills', instance.technical_skills)
         instance.project_experience = validated_data.get('project_experience', instance.project_experience)
         instance.interests = validated_data.get('interests', instance.interests)
@@ -65,14 +66,14 @@ class ChosenDeveloperSerializer(serializers.ModelSerializer):
         return register
 
     # when we need to update the is_delivered, field
-    def update(self, validated_data, instance):
-        print("updating choosen developer table")
-        # instance.result = validated_data.get('result',instance.result)
-        instance.is_completed = validated_data.get('is_completed', instance.is_completed)
-        instance.deliverd = validated_data.get('delivered', instance.deliverd)
-        instance.front_fee = validated_data.get('front_fee', instance.front_fee)
-        instance.save()
-        return instance
+    # def update(self, validated_data, instance):
+    #     print("updating choosen developer table")
+    #     # instance.result = validated_data.get('result',instance.result)
+    #     instance.is_completed = validated_data.get('is_completed', instance.is_completed)
+    #     instance.deliverd = validated_data.get('delivered', instance.deliverd)
+    #     instance.front_fee = validated_data.get('front_fee', instance.front_fee)
+    #     instance.save()
+    #     return instance
 
 
 # ========================================================================================================================
