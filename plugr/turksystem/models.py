@@ -13,6 +13,7 @@ class TurkUser(models.Model):
     lastname = models.CharField(max_length=120, verbose_name="Last Name", blank=True, null=True)
     email = models.CharField(max_length=120, verbose_name="Email", blank=True, null=True)
     password = models.CharField(max_length=120, verbose_name="Password", blank=True, null=True)
+    bio = models.TextField(verbose_name="bio", blank=True, null=True)
     # credential = models.ForeignKey(TurkUserType, verbose_name="Credential", blank=True, null=True)
     credential = models.CharField(max_length=120, verbose_name="User Type", blank=True, null=True)
     accepted = models.BooleanField(verbose_name="Accepted", default=False)
@@ -80,6 +81,13 @@ class ChosenDeveloper(models.Model):
     is_completed = models.BooleanField(default=False, verbose_name="Completed?")
     delivered_at = models.DateTimeField(null=True, blank=True, verbose_name="delivered")
     front_fee = models.IntegerField(default=0, blank=True, null=True, verbose_name="front_fee")
+    system_rating = models.SlugField(max_length=5, default=1, null=True, verbose_name="rating")
+    client_note = models.TextField(blank=True, null=True, verbose_name="note")
+
+
+class SUmessages(models.Model):
+    messenger = models.ForeignKey(TurkUser, blank=True, null=True, related_name="messenger")
+    result = models.TextField(blank=True, null=True, verbose_name="results")
 
 
 # ========================================================================================================================
