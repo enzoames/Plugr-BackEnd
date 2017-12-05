@@ -38,7 +38,7 @@ admin.site.register(BlackList, BlackListAdmin)
 
 
 class ChosenDeveloperAdmin(admin.ModelAdmin):
-    list_display = ['id', 'result', 'developer', 'sysdemand', 'is_completed','front_fee', 'delivered_at']
+    list_display = ['id', 'result', 'developer', 'sysdemand', 'is_completed','front_fee', 'delivered_at','client_note','system_rating']
 
 
 admin.site.register(ChosenDeveloper, ChosenDeveloperAdmin)

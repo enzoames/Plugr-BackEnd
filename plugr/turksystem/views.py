@@ -196,6 +196,22 @@ class SysDemandByClientViewSet(viewsets.ModelViewSet):  # passing query paramete
         return queryset
 
 
+class ChosenSDByEmail(viewsets.ModelViewSet):
+    serializer_class = ChosenDeveloperSerializer
+
+    def get_queryset(self):
+        query_param_email = self.request.query_params.get('email', None)
+        query_param_credential = self.request.query_params.get('credential', None)
+
+        if query_param_credential == 'client':
+            queryset = ChosenDeveloper.objects.filter(sysdemand__client__email=str(query_param_email))
+        elif query_param_credential == 'developer':
+            queryset = ChosenDeveloper.objects.filter(developer__email=str(query_param_email))
+        else:
+            queryset = ChosenDeveloper.objects.all()
+        return queryset
+
+
 # ========================================================================================================================
 # ========================================================================================================================
 # ================================================ ROHAN =================================================================
@@ -308,38 +324,6 @@ class DepositViewSet(viewsets.ModelViewSet):
                 Response(error, status=status.HTTP_404_NOT_FOUND)
 
 
-class TransactionViewSet(viewsets.ModelViewSet):
-    """This handles money"""
-
-    def put(self, request, format=None):
-        sysdemand = request.data.get("systemdemand")
-        client = request.data.get("client")
-        developer = request.data.get("developer")
-
-        if (TurkUser.objects.filter(email=client).exists() and
-                TurkUser.objects.filter(email=developer).exists() and
-                SystemDemand.objects.filter(id=sysdemand).exists()
-            ):
-            # get sysdemand
-            sys = SystemDemand.objects.get(id=sysdemand)
-            front_pay = sys.reward / 2
-
-            # add money to devepler account half the bidding pice not reward
-            TurkUser.objects.filter(email=developer).update(money=F("money") + front_pay)
-            # i also think we should add the front_pay to the chosen developer table
-
-            # just for show
-            return_dic = {
-                "front_Fee": front_pay,
-                "client_": model_to_dict(TurkUser.objects.get(email=developer)),
-                "developer_": model_to_dict(TurkUser.objects.get(email=client))
-            }
-
-            return Response(return_dic, status=status.HTTP_202_ACCEPTED)
-        else:
-            Response(status=status.HTTP_400_BAD_REQUEST)
-
-
 class ChooseDeveloperViewSet(viewsets.ModelViewSet):  # might not be the way we need this
     serializer_class = ChosenDeveloperSerializer
 
@@ -376,17 +360,15 @@ class ChooseDeveloperViewSet(viewsets.ModelViewSet):  # might not be the way we 
                 TurkUser.objects.filter(id=dev).update(money=F("money") + front_fee)
                 # change status of the sysdemand to closed
                 SystemDemand.objects.filter(id=sysdemand).update(status="Closed")
-                #change choosen to true
+                # change choosen to true
                 Bid.objects.filter(systemdemand__id=sysdemand).update(is_chosen=True)
-                #Bid.objects.all(systemdemand__id=SystemDemand).exclude(developer__id=dev).delete()
+                # Bid.objects.all(systemdemand__id=SystemDemand).exclude(developer__id=dev).delete()
 
                 Bid.objects.filter(systemdemand__id=sysdemand).exclude(developer__id=dev).delete()
 
-
-
             else:
                 check = False
-                response_dic[systemdemand] = "this systemdemand does not exist"
+                response_dic[sysdemand] = "this systemdemand does not exist"
 
         if check:
             return Response(status.HTTP_201_CREATED)
@@ -398,7 +380,7 @@ class ChooseDeveloperViewSet(viewsets.ModelViewSet):  # might not be the way we 
         sysdemand = request.data.get("sdID")
         developer = request.data.get("devID")
 
-        ### The updates comes when the developer delivers the systemdemand
+        # The updates comes when the developer delivers the systemdemand
         print("Inside update ChooseDeveloperViewSet")
         if (TurkUser.objects.filter(id=developer).exists() and
                 SystemDemand.objects.filter(id=sysdemand).exists()
@@ -418,6 +400,10 @@ class ChooseDeveloperViewSet(viewsets.ModelViewSet):  # might not be the way we 
             ChosenDeveloper.objects.filter(sysdemand__id=sysdemand).update(
                 delivered_at=datetime.datetime.now())  # update date
 
+            # update  projects completed for clients and developers
+            TurkUser.objects.filter(systemdemand__id=sysdemand).update(completed_projects=F('completed_projects') + 1)
+            TurkUser.objects.filter(id=developer).update(completed_projects=F('completed_projects') + 1)
+
             contract = model_to_dict(ChosenDeveloper.objects.get(sysdemand__id=sysdemand))
 
             return Response(contract, status=status.HTTP_202_ACCEPTED)
@@ -425,15 +411,85 @@ class ChooseDeveloperViewSet(viewsets.ModelViewSet):  # might not be the way we 
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-class ChooseDeveloperByClientViewSet(viewsets.ModelViewSet):
-    serializer_class = ChosenDeveloperSerializer
+class EvaluateDeliveredSDViewSet(viewsets.ModelViewSet):
+    """This viewset is to evaluate the system demand delivered by the developer"""
 
-    def get_queryset(self):
-        print("BY_EMAIL")
-        query_param = self.request.query_params.get('email', None)
-        print(query_param)
-        if query_param:
-            queryset = ChosenDeveloper.objects.filter(sysdemand__client__email=str(query_param))
+    def put(self, request, format=None):
+        _rating = request.data.get("system_rating")
+        _note = request.data.get("client_note")  # this will be not when the rating
+        sysdemand = request.data.get("sdID")
+
+        if ChosenDeveloper.objects.filter(sysdemand__id=sysdemand).exists():
+            message = None
+            ChosenDeveloper.objects.filter(sysdemand__id=sysdemand).update(client_note=_note)
+            ChosenDeveloper.objects.filter(sysdemand__id=sysdemand).update(system_rating=_rating) #update rating on this sysdemand
+            developer_for_rating = ChosenDeveloper.objects.get(sysdemand__id=sysdemand).developer
+            number_of_rating = TurkUser.objects.get(email=developer_for_rating).completed_projects
+            # get average rating
+            average_rating = TurkUser.objects.get(email=developer_for_rating).rating
+            new_ave = None
+
+            if number_of_rating > 1:
+
+                old_sum = (number_of_rating - 1) * average_rating
+                # find the new average rating  of the developer
+                new_ave = (old_sum + _rating) / number_of_rating
+            else:
+                old_sum = number_of_rating * average_rating
+                # find the new average rating  of the developer
+                new_ave = (old_sum + _rating) / number_of_rating
+                # get developer
+            # get number of rating
+
+
+            # update developer average rating
+            TurkUser.objects.filter(email=developer_for_rating).update(rating=new_ave)
+            if _rating >= 3:
+                remaining_balance = ChosenDeveloper.objects.get(sysdemand__id=sysdemand).front_fee
+                # remove money form super user  account and add that to developers account
+                TurkUser.objects.filter(credential='superuser').update(money=F('money') - remaining_balance)
+                dev = ChosenDeveloper.objects.get(sysdemand__id=sysdemand).developer
+                # add money to developer account
+
+                TurkUser.objects.filter(email=str(dev)).update(money=F('money') + remaining_balance)
+
+                message = model_to_dict(TurkUser.objects.get(email=str(dev)))
+                # update the system_rating
+                del message["password"]
+            else:
+                message = {'message': 'Rating below 3, dialog between client, develper and admin'}
+
+            return Response(message, status=status.HTTP_202_ACCEPTED)
         else:
-            queryset = ChosenDeveloper.objects.all()
-        return queryset
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+class RateClientViewSet(viewsets.ModelViewSet):
+
+    def put(self,request,format=None):
+        rate = request.data.get("rate")
+        cliID = request.data.get("client")
+        sysid = request.data.get("sdID")
+
+        if TurkUser.objects.filter(id=cliID).exists():
+            ChosenDeveloper.objects.filter(sysdemand__id=sysid).update(cli_rating=rate)
+            Num_cli_rating = ChosenDeveloper.objects.get(id=cliID).completed_projects
+            ave_cli_rating = ChosenDeveloper.objects.get(id=cliID).rating
+
+            if Num_cli_rating > 1:
+
+                old_sum = (Num_cli_rating - 1) * ave_cli_rating
+                # find the new average rating  of the developer
+                new_ave = (old_sum + rate) / Num_cli_rating
+            else:
+                old_sum = Num_cli_rating * ave_cli_rating
+                # find the new average rating  of the developer
+                new_ave = (old_sum + rate) / Num_cli_rating
+            return Response(status=status.HTTP_202_ACCEPTED)
+        else:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+
+
+

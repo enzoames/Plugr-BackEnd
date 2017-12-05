@@ -81,7 +81,8 @@ class ChosenDeveloper(models.Model):
     is_completed = models.BooleanField(default=False, verbose_name="Completed?")
     delivered_at = models.DateTimeField(null=True, blank=True, verbose_name="delivered")
     front_fee = models.IntegerField(default=0, blank=True, null=True, verbose_name="front_fee")
-    system_rating = models.SlugField(max_length=5, default=1, null=True, verbose_name="rating")
+    system_rating = models.SlugField(max_length=5, default=1, null=True, verbose_name="system rating")
+    cli_rating = models.SlugField(max_length=5,default=1,null=True,verbose_name="cli rating")
     client_note = models.TextField(blank=True, null=True, verbose_name="note")
 
 
