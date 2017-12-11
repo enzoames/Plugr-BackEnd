@@ -20,7 +20,9 @@ class TurkUser(models.Model):
     pending = models.BooleanField(verbose_name="Pending", default=True)
     warning = models.BooleanField(verbose_name="Warning", default=False)
     warning_count = models.IntegerField(verbose_name="Warning Count", default=0)
-    rating = models.IntegerField(verbose_name="Rating", default=0)
+    aveRating_every5 = models.DecimalField(max_digits=5, decimal_places=1, verbose_name="averageRatingfor5", default=0)
+    aveRating_every5Count = models.IntegerField(verbose_name=" count5", default=0)
+    rating = models.DecimalField(max_digits=5, decimal_places=1, verbose_name="Rating", default=0)
     message = models.TextField(verbose_name="Message", blank=True, null=True)
     money = models.IntegerField(verbose_name="Money", default=0)
     completed_projects = models.IntegerField(verbose_name="Completed Projects", default=0)
@@ -52,10 +54,11 @@ class SystemDemand(models.Model):
     precondition = models.TextField(blank=True, null=True, verbose_name="Precondition")
     postcondition = models.TextField(blank=True, null=True, verbose_name="Postcondition")
     description = models.TextField(blank=True, null=True, verbose_name="description")
-    deadline = models.DateTimeField(null=True, blank=True, verbose_name="Deadline")
+    deadline = models.DateField(null=True, blank=True, verbose_name="Deadline")
     reward = models.IntegerField(default=0, verbose_name="Reward")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
     client = models.ForeignKey(TurkUser, blank=True, null=True)
+    failed = models.BooleanField(blank=True, default=False, verbose_name="failed")
     status = models.CharField(max_length=10, choices=status_list, default=OPEN)
 
     def __str__(self):
@@ -79,38 +82,20 @@ class ChosenDeveloper(models.Model):
     developer = models.ForeignKey(TurkUser, blank=True, null=True, related_name="developer")
     sysdemand = models.ForeignKey(SystemDemand, blank=True, null=True)
     is_completed = models.BooleanField(default=False, verbose_name="Completed?")
-    delivered_at = models.DateTimeField(null=True, blank=True, verbose_name="delivered")
+    finish = models.BooleanField(default=False, verbose_name="finish?")
+
+    delivered_at = models.DateField(null=True, blank=True, verbose_name="delivered")
     front_fee = models.IntegerField(default=0, blank=True, null=True, verbose_name="front_fee")
-    system_rating = models.SlugField(max_length=5, default=1, null=True, verbose_name="rating")
+    system_rating = models.SlugField(max_length=5, default=1, null=True, verbose_name="system rating")
+    cli_rating = models.SlugField(max_length=5, default=1, null=True, verbose_name="cli rating")
     client_note = models.TextField(blank=True, null=True, verbose_name="note")
+    message_for_client = models.TextField(blank=True, null=True, verbose_name="message_for_client")
 
 
 class SUmessages(models.Model):
-    messenger = models.ForeignKey(TurkUser, blank=True, null=True, related_name="messenger")
-    result = models.TextField(blank=True, null=True, verbose_name="results")
-
-
-# ========================================================================================================================
-# ========================================================================================================================
-# ==================================================== SAMMIE ============================================================
-# ========================================================================================================================
-# ========================================================================================================================
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    sender = models.ForeignKey(TurkUser, blank=True, null=True, related_name="messenger")
+    complaint = models.TextField(blank=True, null=True, verbose_name="complaint")
+    recipient = models.ForeignKey(TurkUser, blank=True, null=True, related_name="recipient")
 
 
 # ========================================================================================================================

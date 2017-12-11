@@ -9,14 +9,14 @@ from .models import *
 
 class TurkUserAdmin(admin.ModelAdmin):
     list_display = ['id', 'name', 'lastname', 'email', 'credential', 'accepted', 'pending', 'warning', 'warning_count',
-                    'rating', 'money', 'completed_projects']
+                    'rating', 'money', 'completed_projects','aveRating_every5']
 
 
 admin.site.register(TurkUser, TurkUserAdmin)
 
 
 class SystemDemandAdmin(admin.ModelAdmin):
-    list_display = ['id', 'title', 'precondition', 'postcondition', 'description', 'deadline', 'reward', 'created_at',
+    list_display = ['id', 'title', 'precondition', 'postcondition', 'description', 'deadline','failed','reward', 'created_at',
                     'client', 'status']
 
 
@@ -38,7 +38,13 @@ admin.site.register(BlackList, BlackListAdmin)
 
 
 class ChosenDeveloperAdmin(admin.ModelAdmin):
-    list_display = ['id', 'result', 'developer', 'sysdemand', 'is_completed','front_fee', 'delivered_at']
+    list_display = ['id', 'result', 'developer', 'cli_rating','sysdemand','system_rating','client_note', 'is_completed','front_fee', 'delivered_at']
 
 
 admin.site.register(ChosenDeveloper, ChosenDeveloperAdmin)
+
+
+class SUmessagesAdmin(admin.ModelAdmin):
+    list_display = ['sender','complaint']
+
+admin.site.register(SUmessages,SUmessagesAdmin)

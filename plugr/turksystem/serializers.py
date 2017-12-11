@@ -2,6 +2,23 @@ from rest_framework import serializers
 from .models import *
 
 
+# ========================================================================================================================
+# ========================================================================================================================
+# ================================================ ENZO ==================================================================
+# ========================================================================================================================
+# ========================================================================================================================
+
+class RegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TurkUser
+        fields = '__all__'
+
+    def create(self, validated_data):
+        # print(json.dumps(data, indent=4))
+        register = TurkUser.objects.create(**validated_data)
+        return register
+
+
 class TurkUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = TurkUser
@@ -18,6 +35,17 @@ class TurkUserSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
+class MessageSuperUserSerializer(serializers.ModelSerializer):
+    #sender = TurkUserSerializer()
+    class Meta:
+        model = SUmessages
+        fields = '__all__'
+
+    def create(self, validated_data):
+        # print(json.dumps(data, indent=4))
+        register = SUmessages.objects.create(**validated_data)
+        return register
 
 # ========================================================================================================================
 # ========================================================================================================================
@@ -53,7 +81,6 @@ class BidSerializer(serializers.ModelSerializer):
 
 class ChosenDeveloperSerializer(serializers.ModelSerializer):
     sysdemand = SysDemandSerializer()
-    client = TurkUserSerializer()
     developer = TurkUserSerializer()  # for dev and client
 
     class Meta:
@@ -75,19 +102,3 @@ class ChosenDeveloperSerializer(serializers.ModelSerializer):
     #     instance.save()
     #     return instance
 
-
-# ========================================================================================================================
-# ========================================================================================================================
-# ================================================ ENZO ==================================================================
-# ========================================================================================================================
-# ========================================================================================================================
-
-class RegisterSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TurkUser
-        fields = '__all__'
-
-    def create(self, validated_data):
-        # print(json.dumps(data, indent=4))
-        register = TurkUser.objects.create(**validated_data)
-        return register
