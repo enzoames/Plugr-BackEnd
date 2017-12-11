@@ -16,6 +16,8 @@ router.register(r'deposite', DepositViewSet, base_name='deposite')
 router.register(r'contract', ChooseDeveloperViewSet, base_name='contract')
 router.register(r'evaluatesystem',EvaluateDeliveredSDViewSet,base_name='evaluate_delivered_system')
 router.register(r'rateclient',RateClientViewSet,base_name='rateclient')
+router.register(r'rateclient/email',RateClientViewSet,base_name='get_client_rating')
+router.register(r'deleteuser',DeleteUserViewSet,base_name = "delete_user")
 # record contract between client and dev
 # dont touch the order of these urls
 router.register(r'bid/email', BidByEmailViewSet, base_name='emailbid')  # bids by email, for either dev or client
@@ -26,6 +28,9 @@ router.register(r'bid/sd/(?P<sd>\d+)', BidBySDIDViewSet, base_name='sdbid')  # b
 router.register(r'chosensds', ChosenSDByEmail, base_name='chosen_sd')
 
 router.register(r'updateuser', TurkUserProfileViewSet, base_name='updateuser')
+
+
+router.register(r'messagesu', MessageSuperUserViewSet, base_name='messagesu')
 
 # r'^(index|weblog)/$' 
 

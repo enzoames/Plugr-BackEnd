@@ -2,6 +2,23 @@ from rest_framework import serializers
 from .models import *
 
 
+# ========================================================================================================================
+# ========================================================================================================================
+# ================================================ ENZO ==================================================================
+# ========================================================================================================================
+# ========================================================================================================================
+
+class RegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TurkUser
+        fields = '__all__'
+
+    def create(self, validated_data):
+        # print(json.dumps(data, indent=4))
+        register = TurkUser.objects.create(**validated_data)
+        return register
+
+
 class TurkUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = TurkUser
@@ -18,6 +35,17 @@ class TurkUserSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
+class MessageSuperUserSerializer(serializers.ModelSerializer):
+    #sender = TurkUserSerializer()
+    class Meta:
+        model = SUmessages
+        fields = '__all__'
+
+    def create(self, validated_data):
+        # print(json.dumps(data, indent=4))
+        register = SUmessages.objects.create(**validated_data)
+        return register
 
 # ========================================================================================================================
 # ========================================================================================================================
@@ -64,19 +92,13 @@ class ChosenDeveloperSerializer(serializers.ModelSerializer):
         register = ChosenDeveloper.objects.create(**validated_data)
         return register
 
+    # when we need to update the is_delivered, field
+    # def update(self, validated_data, instance):
+    #     print("updating choosen developer table")
+    #     # instance.result = validated_data.get('result',instance.result)
+    #     instance.is_completed = validated_data.get('is_completed', instance.is_completed)
+    #     instance.deliverd = validated_data.get('delivered', instance.deliverd)
+    #     instance.front_fee = validated_data.get('front_fee', instance.front_fee)
+    #     instance.save()
+    #     return instance
 
-# ========================================================================================================================
-# ========================================================================================================================
-# ================================================ ENZO ==================================================================
-# ========================================================================================================================
-# ========================================================================================================================
-
-class RegisterSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TurkUser
-        fields = '__all__'
-
-    def create(self, validated_data):
-        # print(json.dumps(data, indent=4))
-        register = TurkUser.objects.create(**validated_data)
-        return register

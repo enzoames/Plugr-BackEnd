@@ -96,6 +96,12 @@ class LoginTurkUserViewSet(viewsets.ModelViewSet):
         password = request.data.get('password', None)
 
         if TurkUser.objects.filter(email=email, password=password).exists():
+
+            if BlackList.objects.filter(user__email=email).exists():
+                reason = BlackList.objects.get(user__email=email).reason
+                requested_user = {'error': reason}
+                return Response(requested_user, status=status.HTTP_404_NOT_FOUND)
+
             requested_user = TurkUser.objects.get(email=email, password=password)
             returned_user = model_to_dict(requested_user)
             del returned_user['password']
@@ -110,6 +116,19 @@ class LoginTurkUserViewSet(viewsets.ModelViewSet):
 
 class LogoutTurkUserViewSet(viewsets.ModelViewSet):
     def create(self, request, format=None):
+        print(request.data)
+        id = request.data.get("id")
+
+        if TurkUser.objects.get(id = id).warning_count >= 2:
+            TurkUser.objects.filter(id=id).update(pending = True)
+            TurkUser.objects.filter(id=id).update(accepted = False)
+            data = {
+                "user": TurkUser.objects.get(id=id),
+                "reason":"too many warnings"
+            }
+
+            BlackList.objects.create(**data)
+
         response_dict = {'logout': 'succesfully'}
         return Response(response_dict, status=status.HTTP_202_ACCEPTED)
 
@@ -205,11 +224,89 @@ class ChosenSDByEmail(viewsets.ModelViewSet):
 
         if query_param_credential == 'client':
             queryset = ChosenDeveloper.objects.filter(sysdemand__client__email=str(query_param_email))
+            get_all_sysdemand = SystemDemand.objects.filter(client__email=query_param_email)
+            print(get_all_sysdemand)
+            self._checkSysDemandDate(queryset)
+            self._remove_if_still_open(get_all_sysdemand)
+            # here we check if now() > deadline:
+            # this is where we handle
+            # if not, the front money and a fixed penalty will be transferred
+            #  from the developer back to the client, and the developer
+            # will also receive an automatic rating 1 (worst)
+
         elif query_param_credential == 'developer':
             queryset = ChosenDeveloper.objects.filter(developer__email=str(query_param_email))
         else:
             queryset = ChosenDeveloper.objects.all()
         return queryset
+
+    def _checkSysDemandDate(self, queryset):
+        """this will do some stuff regarding the date of each sys demand that belongs to the client"""
+        # /api/turksystem/chosensds/?email=jessica@client.com&credential=client
+        penalty = 10
+        for chosenDev in queryset:
+
+            if chosenDev.sysdemand.deadline < datetime.date.today() and chosenDev.sysdemand.failed == False:
+                # take back front fee from developer and give a rating of 1
+                SystemDemand.objects.filter(id=chosenDev.sysdemand.id).update(failed=True)  # project is set to fail
+                TurkUser.objects.filter(email=str(chosenDev.developer)).update(
+                    money=F('money') - (chosenDev.front_fee + penalty))
+                Num_cli_rating = TurkUser.objects.get(email=str(chosenDev.developer)).completed_projects
+                ave_cli_rating = TurkUser.objects.get(email=str(chosenDev.developer)).rating
+                # incase number of rating is 0
+                if Num_cli_rating < 1:
+                    Num_cli_rating = 1
+
+                if Num_cli_rating > 1:
+                    old_sum = (Num_cli_rating - 1) * ave_cli_rating
+                    # find the new average rating  of the developer
+                    new_ave = (old_sum + 1) / Num_cli_rating
+                else:
+                    old_sum = Num_cli_rating * ave_cli_rating
+                    # find the new average rating  of the developer
+                    new_ave = (old_sum + 1) / Num_cli_rating
+                # update new ratingupdate
+                TurkUser.objects.filter(email=str(chosenDev.developer)).update(rating=new_ave)
+
+    def _remove_if_still_open(self, get_all_sysdemand):
+        """this will remove all sysdemands if not chosen"""
+
+        penalty = 10
+        for sysdemands in get_all_sysdemand:
+            # if sysdemand is not chosen to be worked on before deadline
+            if sysdemands.deadline < datetime.date.today() and sysdemands.status == "Open":
+                # charge client
+                TurkUser.objects.filter(email=str(sysdemands.client)).update(money=F('money') - penalty)
+                # delete sysdemand
+                SystemDemand.objects.filter(id=sysdemands.id).delete()
+                print("somethind just go deleted")
+
+
+class MessageSuperUserViewSet(viewsets.ModelViewSet):
+    serializer_class = MessageSuperUserSerializer
+
+    def create(self, request, format=None):
+        print(request.data)
+        sender = request.data.get('user')
+        complaint = request.data.get('message')
+
+        # current_user = TurkUser.objects.get(pk=sender)
+        # print ("========")
+        # print (current_user)
+        # current_user = model_to_dict(current_user)
+
+        registerdata = {
+            'sender': sender,
+            'complaint': complaint,
+        }
+
+        serializer = MessageSuperUserSerializer(data=registerdata)
+        if serializer.is_valid():
+            register_information = serializer.create(serializer.validated_data)
+            return Response(status=status.HTTP_201_CREATED)
+        else:
+            print(serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # ========================================================================================================================
@@ -258,6 +355,8 @@ class SysDemandViewSet(viewsets.ModelViewSet):
             SystemDemand.objects.create(**sysDemandData)  # reminder to Rohan to fix
 
             sysDemandData["client"] = json_client
+            charge = 10
+            TurkUser.objects.filter(email=client).update(money=F("money")-charge)
             return Response(sysDemandData, status=status.HTTP_201_CREATED)
         else:
             error = {'error': 'Client Not found'}
@@ -403,6 +502,7 @@ class ChooseDeveloperViewSet(viewsets.ModelViewSet):  # might not be the way we 
             # update  projects completed for clients and developers
             TurkUser.objects.filter(systemdemand__id=sysdemand).update(completed_projects=F('completed_projects') + 1)
             TurkUser.objects.filter(id=developer).update(completed_projects=F('completed_projects') + 1)
+            TurkUser.objects.filter(id=developer).update(aveRating_every5Count=F("aveRating_every5Count") + 1)
 
             contract = model_to_dict(ChosenDeveloper.objects.get(sysdemand__id=sysdemand))
 
@@ -415,43 +515,51 @@ class EvaluateDeliveredSDViewSet(viewsets.ModelViewSet):
     """This viewset is to evaluate the system demand delivered by the developer"""
 
     def put(self, request, format=None):
-        _rating = request.data.get("system_rating")
+        _rating = request.data.get("system_rating", None)
         _note = request.data.get("client_note")  # this will be not when the rating
         sysdemand = request.data.get("sdID")
 
         if ChosenDeveloper.objects.filter(sysdemand__id=sysdemand).exists():
             message = None
-            ChosenDeveloper.objects.filter(sysdemand__id=sysdemand).update(client_note=_note)
-            ChosenDeveloper.objects.filter(sysdemand__id=sysdemand).update(system_rating=_rating) #update rating on this sysdemand
+            ChosenDeveloper.objects.filter(sysdemand__id=sysdemand).update(
+                client_note=_note)  # need to set this field is black
+            ChosenDeveloper.objects.filter(sysdemand__id=sysdemand).update(
+                system_rating=_rating)  # update rating on this sysdemand
             developer_for_rating = ChosenDeveloper.objects.get(sysdemand__id=sysdemand).developer
             number_of_rating = TurkUser.objects.get(email=developer_for_rating).completed_projects
+            number_of_rating2 = TurkUser.objects.get(email=developer_for_rating).aveRating_every5Count
             # get average rating
             average_rating = TurkUser.objects.get(email=developer_for_rating).rating
             new_ave = None
 
             if number_of_rating > 1:
-
                 old_sum = (number_of_rating - 1) * average_rating
                 # find the new average rating  of the developer
                 new_ave = (old_sum + _rating) / number_of_rating
+
+                self.check_every_5_rating(developer_for_rating, _rating, number_of_rating2)
             else:
                 old_sum = number_of_rating * average_rating
                 # find the new average rating  of the developer
-                new_ave = (old_sum + _rating) / number_of_rating
+                if number_of_rating == 0:
+                    new_ave = 0
+                else:
+                    new_ave = (old_sum + _rating) / number_of_rating
                 # get developer
-            # get number of rating
-
+                self.check_every_5_rating(developer_for_rating, _rating, number_of_rating2)
 
             # update developer average rating
             TurkUser.objects.filter(email=developer_for_rating).update(rating=new_ave)
+
             if _rating >= 3:
                 remaining_balance = ChosenDeveloper.objects.get(sysdemand__id=sysdemand).front_fee
                 # remove money form super user  account and add that to developers account
-                TurkUser.objects.filter(credential='superuser').update(money=F('money') - remaining_balance)
+                superuser_pay = remaining_balance * 0.05
+                TurkUser.objects.filter(credential='superuser').update(money=F('money') - (remaining_balance-superuser_pay))
                 dev = ChosenDeveloper.objects.get(sysdemand__id=sysdemand).developer
                 # add money to developer account
 
-                TurkUser.objects.filter(email=str(dev)).update(money=F('money') + remaining_balance)
+                TurkUser.objects.filter(email=str(dev)).update(money=F('money') + (remaining_balance-superuser_pay))
 
                 message = model_to_dict(TurkUser.objects.get(email=str(dev)))
                 # update the system_rating
@@ -463,33 +571,143 @@ class EvaluateDeliveredSDViewSet(viewsets.ModelViewSet):
         else:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
+    def check_every_5_rating(self, developer, _rating, number_of_rating):
+        print(number_of_rating)
+
+        if number_of_rating >= 5:
+
+            print("rating >= 5", TurkUser.objects.get(email=developer).aveRating_every5)
+
+            if TurkUser.objects.get(email=developer).aveRating_every5 <= 2:
+                print("warned")
+                TurkUser.objects.filter(email=developer).update(warning_count=F("warning_count") + 1)
+
+            TurkUser.objects.filter(email=developer).update(aveRating_every5=0)
+            TurkUser.objects.filter(email=developer).update(aveRating_every5Count=0)
+            number_of_rating = 1
+
+        average_rating = TurkUser.objects.get(email=developer).aveRating_every5
+        # calculate ave rating for 5
+        if number_of_rating > 1:
+            old_sum = (number_of_rating - 1) * average_rating
+            # find the new average rating  of the developer
+            new_ave = (old_sum + _rating) / number_of_rating
+        else:
+            old_sum = number_of_rating * average_rating
+            if number_of_rating == 0:
+                new_ave = 0
+            else:
+                new_ave = (old_sum + _rating) / number_of_rating
+
+        # update ave rating
+
+        TurkUser.objects.filter(email=developer).update(aveRating_every5=new_ave)
+
 
 class RateClientViewSet(viewsets.ModelViewSet):
+    serializer_class = ChosenDeveloperSerializer
 
-    def put(self,request,format=None):
-        rate = request.data.get("rate")
-        cliID = request.data.get("client")
+    def put(self, request, format=None):
+        print(request.data)
+        rate = request.data.get("client_rating")
+        cli = request.data.get("client")
         sysid = request.data.get("sdID")
 
-        if TurkUser.objects.filter(id=cliID).exists():
+        if TurkUser.objects.filter(email=cli).exists():
             ChosenDeveloper.objects.filter(sysdemand__id=sysid).update(cli_rating=rate)
-            Num_cli_rating = ChosenDeveloper.objects.get(id=cliID).completed_projects
-            ave_cli_rating = ChosenDeveloper.objects.get(id=cliID).rating
+            Num_cli_rating = TurkUser.objects.get(email=cli).completed_projects
+            ave_cli_rating = TurkUser.objects.get(email=cli).rating
+            number_of_rating2 = TurkUser.objects.get(email=cli).aveRating_every5Count
+            print("completed ", Num_cli_rating)
+            print("aveRating", rate)
 
             if Num_cli_rating > 1:
 
                 old_sum = (Num_cli_rating - 1) * ave_cli_rating
                 # find the new average rating  of the developer
                 new_ave = (old_sum + rate) / Num_cli_rating
+                self.check_every_5_rating(cli, rate, number_of_rating2)
             else:
                 old_sum = Num_cli_rating * ave_cli_rating
                 # find the new average rating  of the developer
                 new_ave = (old_sum + rate) / Num_cli_rating
-            return Response(status=status.HTTP_202_ACCEPTED)
+                self.check_every_5_rating(cli, rate, number_of_rating2)
+            # update new ratingupdate
+            print(new_ave)
+            TurkUser.objects.filter(email=cli).update(rating=new_ave)
+            ChosenDeveloper.objects.filter(sysdemand__client__email=cli).update(finish=True)
+            user = model_to_dict(TurkUser.objects.get(email=cli))
+            return Response(user, status=status.HTTP_202_ACCEPTED)
         else:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
+    def check_every_5_rating(self, cli, _rating, number_of_rating):
+
+        if number_of_rating >= 5:
+
+            if TurkUser.objects.get(email=cli).aveRating_every5 <= 2:
+                TurkUser.objects.filter(email=cli).update(warning_count=F("warning_count") + 1)
+                TurkUser.objects.filter(email=cli).update(warning=True)
+
+            TurkUser.objects.filter(email=cli).update(aveRating_every5=0)
+            TurkUser.objects.filter(email=cli).update(aveRating_every5Count=0)
+
+            number_of_rating = 1
+        average_rating = TurkUser.objects.get(email=cli).aveRating_every5Count
+        # calculate ave rating for 5
+        if number_of_rating > 1:
+            old_sum = (number_of_rating - 1) * average_rating
+            # find the new average rating  of the developer
+            new_ave = (old_sum + _rating) / number_of_rating
+        else:
+            old_sum = number_of_rating * average_rating
+
+            if number_of_rating == 0:
+                new_ave = 0
+            else:
+                new_ave = (old_sum + _rating) / number_of_rating
+
+        # update ave rating
+
+        TurkUser.objects.filter(email=cli).update(aveRating_every5=new_ave)
 
 
+class DeleteUserViewSet(viewsets.ModelViewSet):
+    def create(self, request, format=None):
+        # messages to su
+        # choosendev
+        # bids
+        # sysdemands
+        # user
+        user = request.data.get("id")
+        credential = request.data.get("credential")
+        print(request.data)
 
+        if credential == "client":
+            if SUmessages.objects.filter(sender__id=user).exists():
+                SUmessages.objects.filter(sender__id=user).delete()
+            if ChosenDeveloper.objects.filter(sysdemand__client__id=user).exists():
+                ChosenDeveloper.objects.filter(sysdemand__client__id=user).delete()
+            if Bid.objects.filter(systemdemand__client__id=user).exists():
+                Bid.objects.filter(systemdemand__client__id=user).delete()
+            if SystemDemand.objects.filter(client__id=user).exists():
+                SystemDemand.objects.filter(client__id=user).delete()
 
+            TurkUser.objects.filter(id=user).delete()
+
+            print("deleted_client")
+
+        if credential == "developer":
+            if SUmessages.objects.filter(sender__id=user).exists():
+                SUmessages.objects.filter(sender__id=user).delete()
+            if ChosenDeveloper.objects.filter(sysdemand__client__id=user).exists():
+                ChosenDeveloper.objects.filter(sysdemand__client__id=user).delete()
+            if Bid.objects.filter(systemdemand__client__id=user).exists():
+                Bid.objects.filter(systemdemand__client__id=user).delete()
+
+            TurkUser.objects.filter(id=user).delete()
+
+            print("deleted_developer")
+
+        response_dict = {'deleted': 'succesfully'}
+        return Response(response_dict, status=status.HTTP_202_ACCEPTED)
